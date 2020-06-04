@@ -1,0 +1,6 @@
+
+CATEGORY=BORROWERS
+FILENAME=borrowers.csv
+KOHA_UPLOAD=yes
+FLAGS="--rowdelimiter \"
+\" "

@@ -1,0 +1,6 @@
+code1:
+   instance: kohadev
+   branchcode: SPL
+code2:
+   instance: kohadev
+   branchcode: TPL

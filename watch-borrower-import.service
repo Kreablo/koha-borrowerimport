@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch borrower import
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/sbin/start-stop-daemon --background --pidfile /var/run/watch-borrower-import.pid --make-pidfile --start --exec /usr/local/bin/watch-borrower-import.sh
+ExecStop=/sbin/start-stop-daemon --stop --pidfile /var/run/watch-borrower-import.pid --remove-pidfile
+PidFile=/var/run/watch-borrower-import.pid
+
+[Install]
+WantedBy=multi-user.target
