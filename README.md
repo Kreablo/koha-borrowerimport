@@ -1,8 +1,8 @@
 Configuration
 -------------
 
-Create the files /etc/koha/sites/<instance name>/borrowerimport.conf
-and /etc/koha/sites/<instance name>/borrowerimport-instance-map.yaml
+Create the files /etc/koha/sites/&lt;instance name&gt;/borrowerimport.conf
+and /etc/koha/sites/&lt;instance name&gt;/borrowerimport-instance-map.yaml
 based on the example files.
 
 Installation
@@ -19,7 +19,7 @@ Instance map
 
 The instance map is a yaml file that maps the source branch-code to
 koha-instance and koha branchcode. Place this file under
-/etc/koha/sites/<koha instance>/borrowerimport-instance-map.yaml
+/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-instance-map.yaml
 
 In this example, the branchcode in the source data file may contain
 the values code1 and code2, which will both be mapped to the koha
@@ -47,7 +47,7 @@ uploaded.
 Upload tool mode
 ----------------
 
-In the koha administrative view go to administration -> authorized
+In the koha administrative view go to administration -&gt; authorized
 values.  Add the category 'UPLOAD' if it does not already exist. Add
 the value 'BORROWERS' in the category 'UPLOAD'.
 
