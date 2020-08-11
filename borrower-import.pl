@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -wd
 
 use strict;
 
@@ -17,7 +17,7 @@ my ($opt, $usage) = describe_options(
     [ 'input=s', 'Filename of csv file', { required => 1 } ],
     [ 'config=s', 'Configuration directory', { required => 1 }],
     [ 'koha-upload', 'Filename refers to koha uploaded file' ],
-    [ 'columndelimiter=s', 'column delimiter' ],
+    [ 'columndelimiter=s', 'column delimiter', { default => ',' } ],
     [ 'rowdelimiter=s',  'row delimiter' ],
     [ 'encoding=s',  'character encoding',      { default => 'utf8' } ],
     [ 'quote=s',  'quote character', { default => undef } ],
@@ -80,6 +80,7 @@ my $tmpdir;
 my $date_renewed;
 my %column_map;
 my %index_map = ();
+my $category_map;
 my %instance_map;
 my @extra_fields;
 my @header_row;
@@ -88,7 +89,13 @@ my $config_dir = $opt->config;
 my $instance_map;
 if ( -f $config_dir . '/borrowerimport-instance-map.yaml' ) {
     print STDERR "Loading instance-map.yaml\n" if $opt->verbose;
+    $log->debug("Loading instance-map.yaml");
     $instance_map = LoadFile( $config_dir . '/borrowerimport-instance-map.yaml' );
+}
+
+if ( -f $config_dir . '/borrowerimport-category-map.yaml' ) {
+    $log->debug("Loading borrowerimport-category-map.yaml");
+    $category_map = LoadFile( $config_dir . '/borrowerimport-category-map.yaml' );
 }
 
 sub input {
@@ -97,7 +104,7 @@ sub input {
 						     'filename' => $opt->input });
 
 	if (!defined $upload) {
-	    $log->info('File has not been uploaded, nothing to do!');
+	    $log->info('File "' . $opt->input . '" has not been uploaded, nothing to do!');
 	    exit 0;
 	}
 	my $patron = Koha::Patrons->find({ 'borrowernumber' => $upload->owner });
@@ -148,7 +155,7 @@ if (!$opt->do_import) {
 
     %column_map = (
 	branchcode      => branchcode(),
-	categorycode    => id(),
+	categorycode    => categorycode(),
 	cardnumber      => id(),
 	userid          => id(),
 	surname         => id(),
@@ -208,9 +215,6 @@ if (!$opt->do_import) {
     if ($opt->rowdelimiter) {
 	$params->{eol} = $opt->rowdelimiter;
 	$/ = $params->{eol};
-    } else {
-	$params->{eol} = "\r\n";
-	$/ = "\r\n";
     }
     my $csv = Text::CSV->new($params);
     my $csv_out = Text::CSV->new({ 'eol' => "\r\n" });
@@ -242,11 +246,6 @@ if (!$opt->do_import) {
 	exit 1;
     }
 
-    if ($opt->koha_upload) {
-	rename $input_importing, $input_filename;
-	$upload->delete;
-    }
-    
     my $columns = $csv->getline( $fh );
     my @columns = map {s/^\W*(.*)\W*$/$1/; $_} @$columns;
     $csv->column_names(@columns);
@@ -272,6 +271,13 @@ if (!$opt->do_import) {
 	$csv_out->print($instance->{tmpfh}, process_row($row));
     }
 
+    close $fh;
+
+    if ($opt->koha_upload) {
+	rename $input_importing, $input_filename;
+	$upload->delete;
+    }
+    
     for my $i (values %instance_map) {
 
 	$i->{tmpfh}->flush();
@@ -405,6 +411,24 @@ sub branchcode {
 	return [{val => $instance_map{$val}->{branchcode}, index => $index}];
     };
 }
+
+sub categorycode {
+    my $index = shift;
+
+    if (defined $category_map) {
+	return sub {
+	    my $val = shift;
+	    my $key = shift;
+	    if (!defined $index) {
+		$index = $index_map{$key};
+	    }
+	    return [{val => $category_map->{$val}, index => $index}];
+	};
+    } else {
+	return id($index);
+    }
+}
+
 
 sub date_renewed {
     my $index = shift;

@@ -17,13 +17,18 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 
 	debug "instance '$instance' have borrowerimport.conf"
 
+	FILENAME=borrowers.csv
+
 	. /etc/koha/sites/$instance/borrowerimport.conf
 	
 	if [[ "$KOHA_UPLOAD" = "yes" ]]; then
 	    debug "instance '$instance' have KOHA_UPLOAD=yes"
 	   (while true; do
-		if [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/$FILENAME " ]]; then
-		    if [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/" ]]; then
+
+		debug "instance '$instance' checking '/var/lib/koha/$instance/uploads/$CATEGORY/*$FILENAME'"
+
+		if [ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/"*"$FILENAME" ]; then
+		    if [ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/" ]; then
 			inotifywait "/var/lib/koha/$instance/uploads/"
 		    else
 			inotifywait "/var/lib/koha/$instance/uploads/$CATEGORY/"

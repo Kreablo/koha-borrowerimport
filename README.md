@@ -18,7 +18,7 @@ Instance map
 ============
 
 The instance map is a yaml file that maps the source branch-code to
-koha-instance and koha branchcode. Place this file under
+koha instance and koha branchcode. Place this file under
 /etc/koha/sites/&lt;koha instance&gt;/borrowerimport-instance-map.yaml
 
 In this example, the branchcode in the source data file may contain
@@ -36,6 +36,16 @@ It is possible to map the imported borrowers to different
 koha-instances, although the configuration files needs to be placed in
 the configuration directory of a specific instance.
 
+Category map
+============
+
+The category map is a yaml file that maps source borrower category to
+koha borrower categorycode.  The file is optional.  If it does not
+exist the source branchcode will be used as is.  Place this file under
+/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-category-map.yaml
+
+     category1: categorycode1
+     category2: categorycode2
 
 FTP upload mode
 ===============
@@ -82,10 +92,10 @@ Example with curl:
 
       # Authenticate
 
-      curl --silent --cookie-jar "$cookiejar" -F userid=$username -F password=$password https://$domainname > /dev/null
+      curl --silent --cookie-jar "$cookiejar" -F userid="$username" -F password="$password" https://$domainname > /dev/null
 
       # Upload file
 
-      curl --silent --cookie "$cookiejar" -F uploadcategory=BORROWERS -F fileToUpload=@borrowers.csv https://$domainname/cgi-bin/koha/tools/upload-file.pl
+      curl --silent --cookie "$cookiejar" -F uploadcategory=BORROWERS -F fileToUpload=@borrowers.csv https://$domainname/cgi-bin/koha/tools/upload-file.pl?category=BORROWERS
 
 
