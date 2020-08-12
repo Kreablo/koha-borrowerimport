@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wd
+#!/usr/bin/perl -w
 
 use strict;
 
@@ -10,6 +10,11 @@ use File::Temp qw/ tempfile tempdir /;
 use DateTime;
 use YAML::Syck qw( LoadFile );
 
+$YAML::Syck::ImplicitUnicode = 1;
+
+binmode STDERR, ":utf8";
+binmode STDOUT, ":utf8";
+
 my $progname = $0;
 
 my ($opt, $usage) = describe_options(
@@ -19,6 +24,7 @@ my ($opt, $usage) = describe_options(
     [ 'koha-upload', 'Filename refers to koha uploaded file' ],
     [ 'columndelimiter=s', 'column delimiter', { default => ',' } ],
     [ 'rowdelimiter=s',  'row delimiter' ],
+    [ 'userid-column=s', 'Which column to use for userid (the input file must not have a userid column when this option is used).' ],
     [ 'encoding=s',  'character encoding',      { default => 'utf8' } ],
     [ 'quote=s',  'quote character', { default => undef } ],
     [ 'escape=s', 'escape character', { default => undef } ],
@@ -156,9 +162,9 @@ if (!$opt->do_import) {
     %column_map = (
 	branchcode      => branchcode(),
 	categorycode    => categorycode(),
-	cardnumber      => id(),
 	userid          => id(),
 	surname         => id(),
+	lastname        => id(undef, 'surname'),
 	firstname       => id(),
 	address         => id(),
 	address2        => id(),
@@ -177,10 +183,16 @@ if (!$opt->do_import) {
 	date_renewed    => date_renewed()
 	);
 
+    if ($opt->userid_column) {
+	if (!exists $column_map{$opt->userid_column}) {
+	    die "Invalid column: " . $opt->userid_column;
+	}
+	$column_map{$opt->userid_column} = copy(undef, 'userid');
+    }
+
     @header_row = qw(
 	branchcode
 	categorycode
-	cardnumber
 	userid
         surname
         firstname
@@ -250,12 +262,19 @@ if (!$opt->do_import) {
     my @columns = map {s/^\W*(.*)\W*$/$1/; $_} @$columns;
     $csv->column_names(@columns);
 
-    my $i = 0;
     for my $c (@columns) {
+	if ($c eq 'cardnumber') {
+	    unshift @header_row, 'cardnumber';
+	    $column_map{'cardnumber'} = id();
+	}
+    }
+
+    my $i = 0;
+    for my $c (@header_row) {
 	$index_map{$c} = $i;
 	$i++;
     }
-    $index_map{'date_renewed'} = $i;
+    $index_map{'date_renewed'} = $i++;
 
     for my $i (values %instance_map) {
 	$csv_out->print($i->{tmpfh}, \@header_row);
@@ -273,11 +292,6 @@ if (!$opt->do_import) {
 
     close $fh;
 
-    if ($opt->koha_upload) {
-	rename $input_importing, $input_filename;
-	$upload->delete;
-    }
-    
     for my $i (values %instance_map) {
 
 	$i->{tmpfh}->flush();
@@ -298,10 +312,15 @@ if (!$opt->do_import) {
 	}
     }
 
-    my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
-    unless (rename $input_importing, $input_done) {
-	$log->error("Failed to rename file to '$input_done'");
-	exit 1;
+    if ($opt->koha_upload) {
+	rename $input_importing, $input_filename;
+	$upload->delete;
+    } else {
+	my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
+	unless (rename $input_importing, $input_done) {
+	    $log->error("Failed to rename file to '$input_done'");
+	    exit 1;
+	}
     }
 } else {
     require Koha::Patrons::Import;
@@ -389,6 +408,22 @@ sub serialize {
 
 sub id {
     my $index = shift;
+    my $destkey = shift;
+
+    return sub {
+	my $val = shift;
+	my $key = shift;
+	my $k = defined $destkey ? $destkey : $key;
+	if (!defined $index) {
+	    $index = $index_map{$k};
+	}
+	return [{val => $val, index => $index}];
+    };
+}
+
+sub copy {
+    my $index = shift;
+    my $destkey = shift;
 
     return sub {
 	my $val = shift;
@@ -396,7 +431,12 @@ sub id {
 	if (!defined $index) {
 	    $index = $index_map{$key};
 	}
-	return [{val => $val, index => $index}];
+	my $destindex = $index_map{$destkey};
+
+	my $k = defined $destkey ? $destkey : $key;
+	return [{val => $val, index => $index},
+		{val => $val, index => $destindex}
+	    ];
     };
 }
 

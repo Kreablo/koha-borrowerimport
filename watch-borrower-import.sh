@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEBUG=yes
+DEBUG=no
 
 debug () {
     local msg="$1"
