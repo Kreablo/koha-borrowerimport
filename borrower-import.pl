@@ -10,8 +10,6 @@ use File::Temp qw/ tempfile tempdir /;
 use DateTime;
 use YAML::Syck qw( LoadFile );
 
-$YAML::Syck::ImplicitUnicode = 1;
-
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
 
@@ -96,12 +94,22 @@ my $instance_map;
 if ( -f $config_dir . '/borrowerimport-instance-map.yaml' ) {
     print STDERR "Loading instance-map.yaml\n" if $opt->verbose;
     $log->debug("Loading instance-map.yaml");
-    $instance_map = LoadFile( $config_dir . '/borrowerimport-instance-map.yaml' );
+    my $ret = open(my $fh, "<:encoding(UTF-8)", $config_dir . '/borrowerimport-instance-map.yaml');
+    if (!$ret) {
+	$log->error("Failed to load instance-map.yaml: $!");
+	die "Failed to load instance-map.yaml: $!";
+    }
+    $instance_map = LoadFile( $fh );
 }
 
 if ( -f $config_dir . '/borrowerimport-category-map.yaml' ) {
     $log->debug("Loading borrowerimport-category-map.yaml");
-    $category_map = LoadFile( $config_dir . '/borrowerimport-category-map.yaml' );
+    my $ret = open(my $fh, "<:encoding(UTF-8)", $config_dir . '/borrowerimport-category-map.yaml');
+    if (!$ret) {
+	$log->error("Failed to open borrowerimport-category-map.yaml: $!");
+	die "Failed to open borrowerimport-category-map.yaml: $!";
+    }
+    $category_map = LoadFile( $fh );
 }
 
 sub input {
