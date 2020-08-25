@@ -31,10 +31,16 @@ instance kolib and the branccodes branchcode1 and branchcode2.
     code2:
 	   instance: kolib
        branchcode: branchcode2
+	_default:
+	    instance: kolib
+		branchcode: defaultbranchcode
 
 It is possible to map the imported borrowers to different
 koha-instances, although the configuration files needs to be placed in
 the configuration directory of a specific instance.
+
+If there is a _default mapping it will be used when no other mapping
+is matched.
 
 Category map
 ============
@@ -46,6 +52,11 @@ exist the source branchcode will be used as is.  Place this file under
 
      category1: categorycode1
      category2: categorycode2
+	 _default: defaultcategorycode
+
+If there is a _default mapping it is used if no other mapping matches.
+
+If nothing matches, the original category code is used unmodified.
 
 FTP upload mode
 ===============

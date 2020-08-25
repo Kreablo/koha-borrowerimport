@@ -292,6 +292,9 @@ if (!$opt->do_import) {
 	my $branchcode = $row->{branchcode};
 	my $instance = $instance_map{$branchcode};
 	if (!defined $instance) {
+	    $instance = $instance_map{_default};
+	}
+	if (!defined $instance) {
 	    $log->error("No instance defined for $branchcode");
 	    next;
 	}
@@ -470,6 +473,16 @@ sub categorycode {
 	    if (!defined $index) {
 		$index = $index_map{$key};
 	    }
+
+	    my $category = $category_map->{$val};
+	    if (!defined $category) {
+		$category = $category_map->{_default};
+	    }
+
+	    if (!defined $category) {
+		$category = $val;
+	    }
+
 	    return [{val => $category_map->{$val}, index => $index}];
 	};
     } else {
