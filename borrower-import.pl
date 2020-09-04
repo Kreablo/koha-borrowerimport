@@ -324,8 +324,8 @@ if (!$opt->do_import) {
     }
 
     if ($opt->koha_upload) {
-	rename $input_importing, $input_filename;
 	$upload->delete;
+	rename $input_importing, $input_filename;
     } else {
 	my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
 	unless (rename $input_importing, $input_done) {
