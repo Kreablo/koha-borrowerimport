@@ -483,7 +483,7 @@ sub categorycode {
 		$category = $val;
 	    }
 
-	    return [{val => $category_map->{$val}, index => $index}];
+	    return [{val => $category, index => $index}];
 	};
     } else {
 	return id($index);
