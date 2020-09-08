@@ -9,9 +9,17 @@ use Getopt::Long::Descriptive qw( describe_options prog_name );
 use File::Temp qw/ tempfile tempdir /;
 use DateTime;
 use YAML::Syck qw( LoadFile );
+use utf8;
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
+
+my @atexit = ();
+END {
+    for my $f (@atexit) {
+	$f->();
+    }
+}
 
 my $progname = $0;
 
@@ -23,7 +31,7 @@ my ($opt, $usage) = describe_options(
     [ 'columndelimiter=s', 'column delimiter', { default => ',' } ],
     [ 'rowdelimiter=s',  'row delimiter' ],
     [ 'userid-column=s', 'Which column to use for userid (the input file must not have a userid column when this option is used).' ],
-    [ 'encoding=s',  'character encoding',      { default => 'utf8' } ],
+    [ 'encoding=s',  'character encoding',      { default => 'UTF-8' } ],
     [ 'quote=s',  'quote character', { default => undef } ],
     [ 'escape=s', 'escape character', { default => undef } ],
     [ 'use-bom', 'Use File::BOM', { default => 0 } ],
@@ -41,8 +49,6 @@ my ($opt, $usage) = describe_options(
     [ 'help',       "print usage message and exit", { shortcircuit => 1 } ]
     );
 
-binmode STDOUT, ":utf8";
-
 if ($opt->koha_upload) {
     use Koha::UploadedFiles;
     use C4::Auth;
@@ -59,7 +65,7 @@ if ($opt->use_bom) {
 
 my $logger_outputs = [];
 
-if ( defined($opt->logfile) ) {
+if ( $opt->do_import && defined($opt->logfile) ) {
     push @$logger_outputs, [ 'File', 'min_level' => $opt->loglevel, 'filename' => $opt->logfile, 'newline' => 1, 'mode' => '>>' ];
 }
 if ( -t STDOUT ) {
@@ -135,7 +141,7 @@ sub input {
 sub b {
     my ($instance, $branchcode) = @_;
     my ($fh, $filename) = tempfile( "import_${instance}_XXXXXX", DIR => $tmpdir );
-    binmode( $fh, ":" . $opt->encoding );
+    binmode( $fh, ":encoding(" . $opt->encoding . ")" );
     return {
 	'instance' => $instance,
 	'branchcode' => $branchcode,
@@ -162,7 +168,9 @@ if (!$opt->do_import) {
     %instance_map = ();
 
     for my $k (keys %$instance_map) {
-	$instance_map{$k} = b($instance_map->{$k}->{instance}, $instance_map->{$k}->{branchcode});
+	my $k0 = $k;
+	utf8::decode($k0);
+	$instance_map{$k0} = b($instance_map->{$k}->{instance}, $instance_map->{$k}->{branchcode});
     }
 
     $log->debug(Dumper(\%instance_map));
@@ -249,6 +257,13 @@ if (!$opt->do_import) {
 	exit 0;
     }
 
+    if (-e $input_importing) {
+	$log->warn("Import is already ongoing.");
+	exit 0;
+    }
+
+    push @atexit, sub { unlink "$input_importing" if -e "$input_importing"; };
+
     unless (link $input_filename, $input_importing) {
 	$log->emerg("Failed to link file to '$input_importing'");
 	exit 1;
@@ -320,11 +335,15 @@ if (!$opt->do_import) {
 	}
 
 	$log->info("Importing borrowers to " . $i->{instance});
-	
-	system "sudo /usr/sbin/koha-shell -c 'perl \"$progname\" --do-import --input \"" .
+
+	my $cmd = "sudo /usr/sbin/koha-shell -c 'perl \"$progname\" --do-import --input \"" .
 	    $i->{tmpfilename} . "\" --config \"" . $opt->config . "\" --loglevel \"" .
 	    $opt->loglevel . ($opt->logfile ? "\" --logfile \"" . $opt->logfile : '') .
 	    "\"' '" . $i->{instance} . "'";
+
+	$log->debug($cmd);
+
+	system $cmd;
 	if ($? != 0) {
 	    $log->error("Child process for " . $i->{instance} . " failed with status $?");
 	}
