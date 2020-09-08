@@ -249,9 +249,15 @@ if (!$opt->do_import) {
 	exit 0;
     }
 
-    unless (rename $input_filename, $input_importing) {
-	$log->emerg("Failed to rename file to '$input_importing'");
+    unless (link $input_filename, $input_importing) {
+	$log->emerg("Failed to link file to '$input_importing'");
 	exit 1;
+    }
+
+    if ($opt->koha_upload) {
+	$upload->delete;
+    } else {
+	unlink $input_filename;
     }
 
     if ($opt->use_bom) {
@@ -323,15 +329,10 @@ if (!$opt->do_import) {
 	}
     }
 
-    if ($opt->koha_upload) {
-	$upload->delete;
-	rename $input_importing, $input_filename;
-    } else {
-	my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
-	unless (rename $input_importing, $input_done) {
-	    $log->error("Failed to rename file to '$input_done'");
-	    exit 1;
-	}
+    my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
+    unless (rename $input_importing, $input_done) {
+	$log->error("Failed to rename file to '$input_done'");
+	exit 1;
     }
 } else {
     require Koha::Patrons::Import;

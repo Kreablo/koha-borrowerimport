@@ -38,6 +38,8 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 		debug "instance '$instance' directory change"
 
 		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --logfile /var/log/koha/$instance/borrower-import.log --koha-upload --input '$FILENAME' --config /etc/koha/sites/$instance/"
+
+		find "/var/lib/koha/$instance/uploads/$CATEGORY/" -ctime '+7' -name \*.done -print0 | sudo xargs -0 rm
 	    done) &
 
 	elif [[ -n "$FILENAME" ]]; then
@@ -54,6 +56,7 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 		debug "instance '$instance' directory change"
 
 		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --logfile /var/log/koha/$instance/borrower-import.log --input '$FILENAME' --config /etc/koha/sites/$instance/"
+		find /home/$user/upload -ctime '+7' -name $FILENAME\* -print0 | sudo xargs -0 rm
 	    done) &
 	fi
 	   
