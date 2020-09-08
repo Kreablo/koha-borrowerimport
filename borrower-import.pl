@@ -323,7 +323,8 @@ if (!$opt->do_import) {
 	
 	system "sudo /usr/sbin/koha-shell -c 'perl \"$progname\" --do-import --input \"" .
 	    $i->{tmpfilename} . "\" --config \"" . $opt->config . "\" --loglevel \"" .
-	    $opt->loglevel . "\"' '" . $i->{instance} . "'";
+	    $opt->loglevel . ($opt->logfile ? "\" --logfile \"" . $opt->logfile : '') .
+	    "\"' '" . $i->{instance} . "'";
 	if ($? != 0) {
 	    $log->error("Child process for " . $i->{instance} . " failed with status $?");
 	}
