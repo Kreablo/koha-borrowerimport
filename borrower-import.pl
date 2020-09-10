@@ -8,8 +8,9 @@ use Log::Dispatch;
 use Getopt::Long::Descriptive qw( describe_options prog_name );
 use File::Temp qw/ tempfile tempdir /;
 use DateTime;
-use YAML::Syck qw( LoadFile );
+use YAML::Syck qw( Load );
 use utf8;
+use Scalar::Util qw( reftype looks_like_number );
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -98,24 +99,11 @@ my $upload;
 my $config_dir = $opt->config;
 my $instance_map;
 if ( -f $config_dir . '/borrowerimport-instance-map.yaml' ) {
-    print STDERR "Loading instance-map.yaml\n" if $opt->verbose;
-    $log->debug("Loading instance-map.yaml");
-    my $ret = open(my $fh, "<:encoding(UTF-8)", $config_dir . '/borrowerimport-instance-map.yaml');
-    if (!$ret) {
-	$log->error("Failed to load instance-map.yaml: $!");
-	die "Failed to load instance-map.yaml: $!";
-    }
-    $instance_map = LoadFile( $fh );
+    $instance_map = load_yaml_file('borrowerimport-instance-map.yaml');
 }
 
 if ( -f $config_dir . '/borrowerimport-category-map.yaml' ) {
-    $log->debug("Loading borrowerimport-category-map.yaml");
-    my $ret = open(my $fh, "<:encoding(UTF-8)", $config_dir . '/borrowerimport-category-map.yaml');
-    if (!$ret) {
-	$log->error("Failed to open borrowerimport-category-map.yaml: $!");
-	die "Failed to open borrowerimport-category-map.yaml: $!";
-    }
-    $category_map = LoadFile( $fh );
+    my $category_map = load_yaml_file('borrowerimport-category-map.yaml');
 }
 
 sub input {
@@ -168,9 +156,7 @@ if (!$opt->do_import) {
     %instance_map = ();
 
     for my $k (keys %$instance_map) {
-	my $k0 = $k;
-	utf8::decode($k0);
-	$instance_map{$k0} = b($instance_map->{$k}->{instance}, $instance_map->{$k}->{branchcode});
+	$instance_map{$k} = b($instance_map->{$k}->{instance}, $instance_map->{$k}->{branchcode});
     }
 
     $log->debug(Dumper(\%instance_map));
@@ -319,7 +305,8 @@ if (!$opt->do_import) {
 	    $log->error("No instance defined for $branchcode");
 	    next;
 	}
-	$csv_out->print($instance->{tmpfh}, process_row($row));
+	my $output = process_row($row);
+	$csv_out->print($instance->{tmpfh}, $output);
     }
 
     close $fh;
@@ -480,7 +467,14 @@ sub branchcode {
 	if (!defined $index) {
 	    $index = $index_map{$key};
 	}
-	return [{val => $instance_map{$val}->{branchcode}, index => $index}];
+	my $instance = $instance_map{$val};
+	if (!defined $instance) {
+	    $instance = $instance_map{_default};
+	}
+	if (defined $instance) {
+	    $val = $instance->{branchcode};
+	}
+	return [{val => $val, index => $index}];
     };
 }
 
@@ -581,4 +575,51 @@ sub process_row {
     }
 
     return \@prow;
+}
+
+
+sub load_yaml_file {
+    my $filename = shift;
+
+    my $full = $config_dir . '/' . $filename;
+    if ( -f $full) {
+	$log->debug("Loading $filename");
+	my $ret = open(my $fh, "<:raw", $full);
+	if (!$ret) {
+	    $log->error("Failed to open $filename: $!");
+	    die "Failed to open $filename: $!";
+	}
+	do {
+	    local $/ = undef;
+	    my $c = <$fh>;
+	    my $data = Load( $c );
+	    return postproc_yaml_data($data);
+	}
+    }
+}
+
+sub postproc_yaml_data {
+    my $data = shift;
+
+    if (!defined $data) {
+	return undef;
+    } elsif (!reftype $data) {
+	if (!looks_like_number($data)) {
+	    utf8::decode($data);
+	}
+	return $data;
+    } elsif (reftype $data eq 'ARRAY') {
+	my @data = map { postproc_yaml_data($_) } @$data;
+	return \@data;
+    } elsif (reftype $data eq 'HASH') {
+	my $d = {};
+	while (my ($k0, $v0) = each %$data) {
+	    my $k = postproc_yaml_data($k0);
+	    my $v = postproc_yaml_data($v0);
+	    $d->{$k} = $v;
+	}
+	return $d;
+    } else {
+	die "Unexpected reftype: " . reftype $data;
+    }
 }
