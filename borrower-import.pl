@@ -181,6 +181,7 @@ if (!$opt->do_import) {
 	B_country       => id(),
 	B_phone         => id(),
 	email           => id(),
+	dateofbirth     => id(),
 	patron_attributes => id(),
 	date_renewed    => date_renewed()
 	);
@@ -211,6 +212,7 @@ if (!$opt->do_import) {
 	B_country
 	B_phone
         email
+        dateofbirth
         patron_attributes
         date_renewed
 	);
