@@ -11,6 +11,8 @@ use DateTime;
 use YAML::Syck qw( Load );
 use utf8;
 use Scalar::Util qw( reftype looks_like_number );
+use DateTime::Format::Strptime qw(strptime strftime);
+use File::Copy qw(move);
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -35,6 +37,7 @@ my ($opt, $usage) = describe_options(
     [ 'encoding=s',  'character encoding',      { default => 'UTF-8' } ],
     [ 'quote=s',  'quote character', { default => undef } ],
     [ 'escape=s', 'escape character', { default => undef } ],
+    [ 'do-after=s', 'Run this command after import', { default => undef } ],
     [ 'use-bom', 'Use File::BOM', { default => 0 } ],
     [ 'matchpoint', 'Matchpoint for updating existing borrowers.', { default => 'userid' } ],
     [ 'do-import', 'Perform actual import.  This flag is used internally when calling this script recursively.', {default => 0}],
@@ -181,7 +184,7 @@ if (!$opt->do_import) {
 	B_country       => id(),
 	B_phone         => id(),
 	email           => id(),
-	dateofbirth     => id(),
+	dateofbirth     => dateofbirth(),
 	patron_attributes => id(),
 	date_renewed    => date_renewed()
 	);
@@ -343,6 +346,9 @@ if (!$opt->do_import) {
 	$log->error("Failed to rename file to '$input_done'");
 	exit 1;
     }
+    if (defined($opt->do_after)) {
+      push @atexit, sub { system($opt->do_after);};
+    }
 } else {
     require Koha::Patrons::Import;
 
@@ -381,7 +387,9 @@ if (!$opt->do_import) {
     for my $feedback (@{$result->{feedback}}) {
 	$log->info(serialize($feedback));
     }
+
 }
+
 
 sub safestr {
     my $s = shift;
@@ -507,6 +515,27 @@ sub categorycode {
     }
 }
 
+
+sub dateofbirth {
+    my $index = shift;
+    return sub {
+        my $val = shift;
+        my $key = shift;
+        $log->debug("Input date($key): $val ", length($val));
+        if (!defined $index)    {
+             $index = $index_map{$key};
+        }
+        eval {
+            $val  = strftime( "%Y-%m-%d", strptime( "%Y%m%d", $val));
+        };
+        if ($@) {
+            $log->debug("Failed to parse date,might not need change '$val'");
+            $val = '';
+        }
+        $log->debug("Date changed too: '$val'");
+        return [{val => $val, index => $index}];
+    };
+}
 
 sub date_renewed {
     my $index = shift;
