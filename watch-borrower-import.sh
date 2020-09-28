@@ -18,8 +18,13 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 	debug "instance '$instance' have borrowerimport.conf"
 
 	FILENAME=borrowers.csv
+	FLAGS=
 
 	. /etc/koha/sites/$instance/borrowerimport.conf
+
+	if [[ -n "$DATEFORMAT" ]]; then
+	    FLAGS+=" --dateformat='$DATEFORMAT'"
+	fi
 	
 	if [[ "$KOHA_UPLOAD" = "yes" ]]; then
 	    debug "instance '$instance' have KOHA_UPLOAD=yes"

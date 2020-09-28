@@ -41,6 +41,7 @@ my ($opt, $usage) = describe_options(
     [ 'use-bom', 'Use File::BOM', { default => 0 } ],
     [ 'matchpoint', 'Matchpoint for updating existing borrowers.', { default => 'userid' } ],
     [ 'do-import', 'Perform actual import.  This flag is used internally when calling this script recursively.', {default => 0}],
+    [ 'dateformat=s', 'Dateformat for dateofbirth.', {default => '%Y-%m-%d'} ],
     [ 'logfile=s', 'Log file' ],
     [ 'loglevel=s', 'Log level', { default => 'warning', callbacks => {
 	'is loglevel' => sub {
@@ -184,7 +185,7 @@ if (!$opt->do_import) {
 	B_country       => id(),
 	B_phone         => id(),
 	email           => id(),
-	dateofbirth     => dateofbirth(),
+	dateofbirth     => dateconv(),
 	patron_attributes => id(),
 	date_renewed    => date_renewed()
 	);
@@ -516,7 +517,7 @@ sub categorycode {
 }
 
 
-sub dateofbirth {
+sub dateconv {
     my $index = shift;
     return sub {
         my $val = shift;
@@ -526,7 +527,7 @@ sub dateofbirth {
              $index = $index_map{$key};
         }
         eval {
-            $val  = strftime( "%Y-%m-%d", strptime( "%Y%m%d", $val));
+            $val  = strftime( "%Y-%m-%d", strptime( $opt->dateformat, $val));
         };
         if ($@) {
             $log->debug("Failed to parse date,might not need change '$val'");
