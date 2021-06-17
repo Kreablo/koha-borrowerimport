@@ -109,4 +109,21 @@ Example with curl:
 
       curl --silent --cookie "$cookiejar" -F uploadcategory=BORROWERS -F fileToUpload=@borrowers.csv https://$domainname/cgi-bin/koha/tools/upload-file.pl?category=BORROWERS
 
+Examle with curl for Windows:
 
+      @ECHO off
+      REM
+      SET domainname="site"
+      SET username="userid"
+      SET password="passwprd"
+
+      set cookiejar=.\cookiejar.tmp
+      REM type nul > %cookiejar%
+      REM Authenticate
+      curl.exe -v -c %cookiejar% -F userid=%username% -F password=%password% http://%domainname% > $NUL 2>&1
+      REM echo curl.exe -v -c "%cookiejar%" -F userid=%username% -F password=%password% http://%domainname%
+
+      REM Upload file
+      curl.exe -v --cookie "%cookiejar%" -F "fileToUpload=@borrowers.csv" "http://%domainname%/cgi-bin/koha/tools/upload-file.pl?category=BORROWERS&
+      REM
+      del %cookiejar%

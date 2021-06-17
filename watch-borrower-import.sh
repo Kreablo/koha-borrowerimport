@@ -32,11 +32,11 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 
 		debug "instance '$instance' checking '/var/lib/koha/$instance/uploads/$CATEGORY/*$FILENAME'"
 
-		if [ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/"*"$FILENAME" ]; then
-		    if [ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/" ]; then
-			inotifywait "/var/lib/koha/$instance/uploads/"
+		while [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/"*"$FILENAME" ]]; then
+		    if [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/" ]]; then
+			inotifywait -e close_write "/var/lib/koha/$instance/uploads/"
 		    else
-			inotifywait "/var/lib/koha/$instance/uploads/$CATEGORY/"
+			inotifywait -e close_write "/var/lib/koha/$instance/uploads/$CATEGORY/"
 		    fi
 		fi
 
@@ -54,8 +54,8 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 		exit 1
 	    fi
 	    (while true; do
-		if [[ ! -e "$FILENAME" ]]; then
-		    inotifywait "$(dirname "$FILENAME")"
+		while [[ ! -e "$FILENAME" ]]; then
+		    inotifywait -e close_write "$(dirname "$FILENAME")"
 		fi
 
 		debug "instance '$instance' directory change"

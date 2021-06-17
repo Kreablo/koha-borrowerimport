@@ -42,6 +42,8 @@ my ($opt, $usage) = describe_options(
     [ 'matchpoint', 'Matchpoint for updating existing borrowers.', { default => 'userid' } ],
     [ 'do-import', 'Perform actual import.  This flag is used internally when calling this script recursively.', {default => 0}],
     [ 'dateformat=s', 'Dateformat for dateofbirth.', {default => '%Y-%m-%d'} ],
+    [ 'add-dateexpiry', 'Add a column with dateexpiry set to one year in the future' ],
+    [ 'test', 'Only generate csv file, no import is performed.' ],
     [ 'logfile=s', 'Log file' ],
     [ 'loglevel=s', 'Log level', { default => 'warning', callbacks => {
 	'is loglevel' => sub {
@@ -93,6 +95,7 @@ local $SIG{__WARN__} = sub {
 
 my $tmpdir;
 my $date_renewed;
+my $date_expiry;
 my %column_map;
 my %index_map = ();
 my $category_map;
@@ -144,6 +147,7 @@ sub b {
 
 if (!$opt->do_import) {
     $date_renewed = DateTime->now->strftime('%F');
+    $date_expiry = DateTime->now->add( years => 1 )->strftime('%F');
 
     my $TMPDIR = defined $ENV{TMPDIR} ? $ENV{TMPDIR} : '/tmp';
 
@@ -221,7 +225,14 @@ if (!$opt->do_import) {
         date_renewed
 	);
 
-    @extra_fields = qw( date_renewed );
+    @extra_fields = qw( date_renewed da);
+
+    if ($opt->add_dateexpiry) {
+        $column_map{dateexpiry} = date_expiry();
+        push @header_row, 'dateexpiry';
+        push @extra_fields, 'dateexpiry';
+    }
+
 
     my $params ={
 	sep_char => $opt->columndelimiter,
@@ -336,10 +347,14 @@ if (!$opt->do_import) {
 
 	$log->debug($cmd);
 
-	system $cmd;
-	if ($? != 0) {
-	    $log->error("Child process for " . $i->{instance} . " failed with status $?");
-	}
+        if ($opt->test) {
+            print "Will execute command: '$cmd'";
+        } else {
+            system $cmd;
+            if ($? != 0) {
+                $log->error("Child process for " . $i->{instance} . " failed with status $?");
+            }
+        }
     }
 
     my $input_done = $input_filename . '.done-' . DateTime->now->strftime('%F %T');
@@ -546,6 +561,17 @@ sub date_renewed {
 	    $index = $index_map{'date_renewed'};
 	}
 	return [{val => $date_renewed, index => $index}];
+    };
+}
+
+sub date_expiry {
+    my $index = shift;
+
+    return sub {
+	if (!defined $index) {
+	    $index = $index_map{'date_expiry'};
+	}
+	return [{val => $date_expiry, index => $index}];
     };
 }
 
