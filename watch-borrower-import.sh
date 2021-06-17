@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DEBUG=no
+LOGLEVEL=info
 
 debug () {
     local msg="$1"
@@ -32,17 +33,17 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 
 		debug "instance '$instance' checking '/var/lib/koha/$instance/uploads/$CATEGORY/*$FILENAME'"
 
-		while [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/"*"$FILENAME" ]]; then
+		while [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/"*"$FILENAME" ]]; do
 		    if [[ ! -e "/var/lib/koha/$instance/uploads/$CATEGORY/" ]]; then
 			inotifywait -e close_write "/var/lib/koha/$instance/uploads/"
 		    else
 			inotifywait -e close_write "/var/lib/koha/$instance/uploads/$CATEGORY/"
 		    fi
-		fi
+		done
 
 		debug "instance '$instance' directory change"
 
-		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --logfile /var/log/koha/$instance/borrower-import.log --koha-upload --input '$FILENAME' --config /etc/koha/sites/$instance/"
+		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --loglevel $LOGLEVEL --logfile /var/log/koha/$instance/borrower-import.log --koha-upload --input '$FILENAME' --config /etc/koha/sites/$instance/"
 
 		find "/var/lib/koha/$instance/uploads/$CATEGORY/" -ctime '+7' -name \*.done -print0 | sudo xargs -0 rm
 	    done) &
@@ -54,14 +55,14 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 		exit 1
 	    fi
 	    (while true; do
-		while [[ ! -e "$FILENAME" ]]; then
+		while [[ ! -e "$FILENAME" ]]; do
 		    inotifywait -e close_write "$(dirname "$FILENAME")"
-		fi
+		done
 
 		debug "instance '$instance' directory change"
 
-		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --logfile /var/log/koha/$instance/borrower-import.log --input '$FILENAME' --config /etc/koha/sites/$instance/"
-		find /home/$user/upload -ctime '+7' -name $FILENAME\* -print0 | sudo xargs -0 rm
+		bash -c "PERL5LIB=/usr/share/koha/lib KOHA_CONF=/etc/koha/sites/$instance/koha-conf.xml /usr/local/bin/borrower-import.pl $FLAGS --loglevel $LOGLEVEL --logfile /var/log/koha/$instance/borrower-import.log --input '$FILENAME' --config /etc/koha/sites/$instance/"
+		find "$(dirname "$FILENAME")" -ctime '+7' -name $FILENAME\* -print0 | sudo xargs -r -0 rm
 	    done) &
 	fi
 	   

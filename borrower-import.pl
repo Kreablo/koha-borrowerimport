@@ -182,11 +182,13 @@ if (!$opt->do_import) {
 	city            => id(),
 	country         => id(),
 	phone           => id(),
+        mobile          => id(),
 	B_address       => id(),
 	B_address2      => id(),
 	B_zipcode       => id(),
 	B_city          => id(),
 	B_country       => id(),
+        B_email         => id(),
 	B_phone         => id(),
 	email           => id(),
 	dateofbirth     => dateconv(),
@@ -213,11 +215,13 @@ if (!$opt->do_import) {
 	city
 	country
 	phone
+        mobile
 	B_address
 	B_address2
 	B_zipcode
 	B_city
 	B_country
+        B_email
 	B_phone
         email
         dateofbirth
@@ -225,7 +229,7 @@ if (!$opt->do_import) {
         date_renewed
 	);
 
-    @extra_fields = qw( date_renewed da);
+    @extra_fields = qw( date_renewed );
 
     if ($opt->add_dateexpiry) {
         $column_map{dateexpiry} = date_expiry();
