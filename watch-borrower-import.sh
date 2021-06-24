@@ -13,15 +13,29 @@ debug () {
 for instance in $(/usr/sbin/koha-list --enabled) ; do
 
     debug "checking instance '$instance'"
-    
-    if [[ -e /etc/koha/sites/$instance/borrowerimport.conf ]]; then
 
-	debug "instance '$instance' have borrowerimport.conf"
+    declare -a config_files=()
+
+    if [[ -e /etc/koha/sites/$instance/borrowerimport.conf ]]; then
+        config_files[${#config_files[@]}]=/etc/koha/sites/$instance/borrowerimport.conf
+    fi
+
+    if [[ -d /etc/koha/sites/$instance/borrowerimport.conf.d ]]; then
+        for f in /etc/koha/sites/$instance/borrowerimport.conf.d/*.conf; do
+            if [[ -e "$f" ]]; then
+                config_files[${#config_files[@]}]="$f"
+            fi
+        done
+    fi
+
+    for config_file in "${config_files[@]}"; do
+
+	debug "instance '$instance' have config file $config_file"
 
 	FILENAME=borrowers.csv
 	FLAGS=
 
-	. /etc/koha/sites/$instance/borrowerimport.conf
+	. "$config_file"
 
 	if [[ -n "$DATEFORMAT" ]]; then
 	    FLAGS+=" --dateformat='$DATEFORMAT'"
@@ -67,7 +81,7 @@ for instance in $(/usr/sbin/koha-list --enabled) ; do
 	fi
 	   
 
-    fi
+    done
 done
 
 debug "waiting"

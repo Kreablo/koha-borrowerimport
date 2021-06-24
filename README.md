@@ -1,16 +1,20 @@
 Configuration
 =============
 
-Create the files /etc/koha/sites/&lt;instance name&gt;/borrowerimport.conf
-and /etc/koha/sites/&lt;instance name&gt;/borrowerimport-instance-map.yaml
+Create the files `/etc/koha/sites/&lt;instance name&gt;/borrowerimport.conf`
+and `/etc/koha/sites/&lt;instance name&gt;/borrowerimport-instance-map.yaml`
 based on the example files.
+
+It is also possible to watch multiple uploaded files by creating several
+config files with file name ending with `.conf` in the directory
+`/etc/koha/sites/&lt;instance name&gt;/borrowerimport.conf.d`.
 
 Installation
 ============
 
 Run the script install.sh.
 
-If borrowerimport.conf is updated, you will need to restart the service:
+If borrowerimport.conf  is updated, you will need to restart the service:
 
     sudo systemctl restart watch-borrower-import
 
@@ -19,7 +23,7 @@ Instance map
 
 The instance map is a yaml file that maps the source branch-code to
 koha instance and koha branchcode. Place this file under
-/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-instance-map.yaml
+`/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-instance-map.yaml`
 
 In this example, the branchcode in the source data file may contain
 the values code1 and code2, which will both be mapped to the koha
@@ -48,7 +52,7 @@ Category map
 The category map is a yaml file that maps source borrower category to
 koha borrower categorycode.  The file is optional.  If it does not
 exist the source branchcode will be used as is.  Place this file under
-/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-category-map.yaml
+`/etc/koha/sites/&lt;koha instance&gt;/borrowerimport-category-map.yaml`
 
      category1: categorycode1
      category2: categorycode2
